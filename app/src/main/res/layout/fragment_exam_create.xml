@@ -2,8 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:layout_height="match_parent">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -59,7 +58,6 @@
                     android:id="@+id/classPicker"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:background="@android:drawable/btn_dropdown"
                     android:layout_marginBottom="16dp"
                     android:spinnerMode="dropdown" />
 
@@ -97,7 +95,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Bắt đầu nhập câu hỏi"
-                    android:backgroundTint="@color/design_default_color_primary"
                     android:textColor="@android:color/white" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>

@@ -11,43 +11,46 @@
 
         <!-- Exam details section -->
         <TextView
-            android:id="@+id/className"
+            android:id="@+id/classNameText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="24sp"
+            android:textAlignment="center"
+            android:textSize="20sp"
             android:textStyle="bold"
-            android:layout_marginBottom="16dp"/>
+            android:layout_marginBottom="5dp"/>
 
         <TextView
-            android:id="@+id/name"
+            android:id="@+id/nameTestText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="18sp"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/dueDate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:textAlignment="center"
             android:textSize="16sp"
-            android:layout_marginBottom="16dp"/>
+            android:layout_marginBottom="5dp"/>
+
+        <TextView
+            android:id="@+id/numberOfQuestionsText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:textAlignment="center"
+            android:textSize="16sp"
+            android:layout_marginBottom="5dp"
+            android:textColor="@android:color/black"/>
+
+        <TextView
+            android:id="@+id/timerDueText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:textSize="18sp"
+            android:layout_marginBottom="5dp"/>
 
         <!-- WebView for displaying PDF -->
         <com.github.barteksc.pdfviewer.PDFView
             android:id="@+id/pdfView"
             android:layout_width="match_parent"
-            android:layout_height="250dp"
+            android:layout_height="300dp"
             android:requestLegacyExternalStorage="true"/>
-
-        <TextView
-            android:id="@+id/questionCountText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Number of Questions: 0"
-            android:textSize="18sp"
-            android:layout_marginBottom="16dp"
-            android:textColor="@android:color/black"/>
-
 
         <!-- Multiple-choice question layout -->
         <androidx.recyclerview.widget.RecyclerView
@@ -56,13 +59,12 @@
             android:layout_height="0dp"
             android:layout_weight="1"/>
 
-
         <!-- Submit button -->
         <Button
             android:id="@+id/submitButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Submit"
+            android:text="Nộp bài"
             android:layout_marginTop="16dp"/>
 
     </LinearLayout>

@@ -18,13 +18,14 @@
             android:layout_weight="1"
             android:text="Exam name"
             android:textSize="18sp"
+            android:layout_marginTop="@dimen/margin_base"
             android:textStyle="bold" />
 
         <ImageView
             android:id="@+id/icon_course"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:src="@drawable/exam" /> <!-- Replace with your icon -->
+            android:src="@drawable/test" /> <!-- Replace with your icon -->
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

@@ -145,7 +145,7 @@ public class TeacherExamFragment extends Fragment {
                             classCode,
                             name,
                             timestamp != null ? timestamp : System.currentTimeMillis()/1000,
-                            isAssigned != null ? isAssigned : false,
+                            isAssigned != null ? isAssigned : true,
                             id,
                             pdfUrl,
                             answerUrl

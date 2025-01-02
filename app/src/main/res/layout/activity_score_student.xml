@@ -11,6 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
+        android:layout_marginBottom="@dimen/margin_basex2"
         android:text="Kết quả kiểm tra"
         android:textSize="24sp"
         android:textStyle="bold"
@@ -33,11 +34,10 @@
     <androidx.cardview.widget.CardView
         android:id="@+id/cardAverageScore"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
         android:layout_marginTop="20dp"
-        android:padding="16dp"
-        app:cardCornerRadius="16dp"
-        app:cardBackgroundColor="@color/purple_500"> <!-- Sử dụng màu nền mong muốn ở đây -->
+        app:cardCornerRadius="10dp"
+        app:cardBackgroundColor="@color/primary"> <!-- Sử dụng màu nền mong muốn ở đây -->
 
         <TextView
             android:id="@+id/tvAverageScore"
@@ -46,7 +46,8 @@
             android:gravity="center"
             android:text="Điểm trung bình: "
             android:textColor="@android:color/white"
-           android:textSize="18sp"
+            android:layout_marginTop="8dp"
+            android:textSize="18sp"
             android:textStyle="bold" />
 
     </androidx.cardview.widget.CardView>

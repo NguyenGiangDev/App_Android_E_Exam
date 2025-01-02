@@ -21,6 +21,7 @@
         android:id="@+id/recyclerViewClasses"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:layout_marginTop="@dimen/margin_basex2"
         app:layout_constraintTop_toBottomOf="@id/btn_create_class"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

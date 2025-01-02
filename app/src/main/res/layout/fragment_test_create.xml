@@ -48,6 +48,36 @@
                         android:textSize="16sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <EditText
+                        android:id="@+id/timeLimitInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Nhập thời gian làm bài"
+                        android:inputType="number"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <EditText
+                        android:id="@+id/numberQuestionInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Nhập số lượng câu hỏi"
+                        android:inputType="number"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -59,7 +89,6 @@
                     android:id="@+id/classPicker"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:background="@android:drawable/btn_dropdown"
                     android:layout_marginBottom="16dp"
                     android:spinnerMode="dropdown" />
 
@@ -82,7 +111,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Tải file đề bài lên"
-                    android:backgroundTint="@color/design_default_color_primary"
                     android:textColor="@android:color/white" />
 
                 <Button
@@ -90,7 +118,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Tải file đáp án (.xlsx)"
-                    android:backgroundTint="@color/design_default_color_primary"
                     android:textColor="@android:color/white"
                     android:layout_marginTop="8dp" />
             </LinearLayout>
@@ -103,7 +130,6 @@
             android:layout_height="wrap_content"
             android:text="Tạo bài kiểm tra"
             android:textColor="@android:color/white"
-            android:backgroundTint="@color/design_default_color_primary"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"/>
     </LinearLayout>

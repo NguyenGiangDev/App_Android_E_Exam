@@ -13,6 +13,7 @@
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="32dp"
+        android:layout_marginTop="16dp"
         android:text="Tên lớp"
         android:textSize="24sp"
         android:textColor="@android:color/black" />
@@ -27,6 +28,7 @@
         android:layout_marginBottom="8dp"
         android:layout_centerHorizontal="true"
         app:cardCornerRadius="8dp"
+        android:backgroundTint="@color/surface"
         app:cardElevation="4dp">
 
         <RelativeLayout
@@ -49,6 +51,7 @@
                 android:layout_marginStart="16dp"
                 android:text="Danh sách học sinh"
                 android:textSize="18sp"
+                android:layout_marginTop="@dimen/margin_basex2"
                 android:textColor="@android:color/black"/>
         </RelativeLayout>
     </androidx.cardview.widget.CardView>
@@ -63,6 +66,7 @@
         android:layout_marginBottom="8dp"
         android:layout_centerHorizontal="true"
         app:cardCornerRadius="8dp"
+        android:backgroundTint="@color/surface"
         app:cardElevation="4dp">
 
         <RelativeLayout
@@ -85,44 +89,9 @@
                 android:layout_marginStart="16dp"
                 android:text="Danh sách điểm của học sinh"
                 android:textSize="18sp"
+                android:layout_marginTop="@dimen/margin_basex2"
                 android:textColor="@android:color/black"/>
         </RelativeLayout>
-    </androidx.cardview.widget.CardView>
-
-    <!-- CardView cho Thông báo -->
-    <androidx.cardview.widget.CardView
-        android:id="@+id/card_notification"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/card_assignment"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="8dp"
-        android:layout_centerHorizontal="true"
-        app:cardCornerRadius="8dp"
-        app:cardElevation="4dp">
-
-<!--        <RelativeLayout-->
-<!--            android:layout_width="match_parent"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:padding="16dp">-->
-
-<!--            <ImageView-->
-<!--                android:id="@+id/image_notification"-->
-<!--                android:layout_width="48dp"-->
-<!--                android:layout_height="48dp"-->
-<!--                android:src="@drawable/notification2"-->
-<!--                android:layout_alignParentStart="true"/>-->
-
-<!--            <TextView-->
-<!--                android:id="@+id/text_notification"-->
-<!--                android:layout_width="wrap_content"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:layout_toEndOf="@id/image_notification"-->
-<!--                android:layout_marginStart="16dp"-->
-<!--                android:text="Thông báo"-->
-<!--                android:textSize="18sp"-->
-<!--                android:textColor="@android:color/black"/>-->
-<!--        </RelativeLayout>-->
     </androidx.cardview.widget.CardView>
 
 </RelativeLayout>

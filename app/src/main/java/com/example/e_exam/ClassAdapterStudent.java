@@ -1,8 +1,11 @@
 package com.example.e_exam;
 
+import static android.app.PendingIntent.getActivity;
+
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,6 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.database.DataSnapshot;
@@ -113,11 +117,22 @@ public class ClassAdapterStudent extends RecyclerView.Adapter<ClassAdapterStuden
     }
 
     private void navigateToClassStudent(String className) {
-        Intent intent = new Intent(context, ClassStudent.class);
-        intent.putExtra("className", className);
-        intent.putExtra("StudentId", studentId);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // Thêm flag này nếu context không phải Activity
-        context.startActivity(intent);
+        ClassStudentFragment fragment = new ClassStudentFragment();
+
+        // Gửi dữ liệu vào Fragment thông qua Bundle
+        Bundle bundle = new Bundle();
+        bundle.putString("CLASS_NAME", className);
+        bundle.putString("studentId", studentId);
+        fragment.setArguments(bundle);
+
+        // Kiểm tra nếu context là Activity
+        if (context instanceof AppCompatActivity) {
+            AppCompatActivity activity = (AppCompatActivity) context;
+            activity.getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.frame_layout, fragment) // frame_layout là container của Fragment
+                    .addToBackStack(null) // Thêm vào back stack
+                    .commit();
+        }
     }
 
     private void showJoinClassDialog(String className) {

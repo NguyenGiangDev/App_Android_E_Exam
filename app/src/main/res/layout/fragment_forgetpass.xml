@@ -3,8 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
-    android:background="#FFFFFF">
+    android:padding="16dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -29,6 +28,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
+            android:layout_marginTop="@dimen/margin_basex2"
             android:background="@drawable/edittext_background"
             android:drawablePadding="8dp"
             android:hint="Nhập email"
@@ -39,12 +39,12 @@
         <Button
             android:id="@+id/forgotPasswordButton"
             android:layout_width="match_parent"
-            android:layout_height="98dp"
-            android:layout_marginBottom="16dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
             android:backgroundTint="#6B44C8"
-            android:padding="12dp"
+            android:padding="8dp"
             android:text="Gửi yêu cầu"
-            android:textSize="23dp"
+            android:textSize="16dp"
             android:textColor="#FFFFFF" />
 
         <!-- Redirect to Login -->

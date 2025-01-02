@@ -13,7 +13,6 @@
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="32dp"
-        android:layout_marginTop="16dp"
         android:text="Tên lớp"
         android:textSize="24sp"
         android:textColor="@android:color/black" />
@@ -30,7 +29,6 @@
         app:cardCornerRadius="8dp"
         app:cardElevation="4dp"
         android:clickable="true"
-        android:backgroundTint="@color/surface"
         android:focusable="true">
 
         <RelativeLayout
@@ -53,14 +51,12 @@
                 android:layout_toEndOf="@id/image_assignment"
                 android:text="Bài tập"
                 android:textColor="@android:color/black"
-                android:layout_marginTop="@dimen/margin_basex2"
                 android:textSize="18sp" />
         </RelativeLayout>
     </androidx.cardview.widget.CardView>
 
-    <!-- CardView cho Thông báo -->
     <androidx.cardview.widget.CardView
-        android:id="@+id/card_notification"
+        android:id="@+id/card_test_student"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/card_assignment_student"
@@ -70,7 +66,6 @@
         app:cardCornerRadius="8dp"
         app:cardElevation="4dp"
         android:clickable="true"
-        android:backgroundTint="@color/surface"
         android:focusable="true">
 
         <RelativeLayout
@@ -79,24 +74,21 @@
             android:padding="16dp">
 
             <ImageView
-                android:id="@+id/image_test"
+                android:id="@+id/image_assignment1"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:layout_alignParentStart="true"
-                android:layout_marginLeft="@dimen/margin_base"
-                android:src="@drawable/test" />
+                android:src="@drawable/assignment" />
 
             <TextView
-                android:id="@+id/text_test"
+                android:id="@+id/text_Test"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:layout_toEndOf="@id/image_test"
-                android:text="Bài Kiểm tra"
+                android:layout_toEndOf="@id/image_assignment1"
+                android:text="Bài kiểm tra"
                 android:textColor="@android:color/black"
-                android:layout_marginTop="@dimen/margin_basex2"
                 android:textSize="18sp" />
         </RelativeLayout>
     </androidx.cardview.widget.CardView>
-
 </RelativeLayout>

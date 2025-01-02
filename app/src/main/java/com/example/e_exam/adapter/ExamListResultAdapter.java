@@ -5,54 +5,95 @@ import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
 import android.widget.TextView;
-
-import com.example.e_exam.model.Answer;
 import com.example.e_exam.R;
 
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
 
-public class ExamListResultAdapter extends ArrayAdapter<Answer> {
-    private Context context;
-    private List<Answer> questions;
+public class ExamListResultAdapter extends BaseAdapter {
+    private final Context context;
+    private final ArrayList<Map<String, Object>> questions;
 
-    public ExamListResultAdapter(Context context, List<Answer> questions) {
-        super(context, R.layout.list_result_exam, questions);
+    public ExamListResultAdapter(Context context, ArrayList<Map<String, Object>> questions) {
         this.context = context;
         this.questions = questions;
     }
 
     @Override
+    public int getCount() {
+        return questions.size();
+    }
+
+    @Override
+    public Object getItem(int position) {
+        return questions.get(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return position;
+    }
+
+    @Override
     public View getView(int position, View convertView, ViewGroup parent) {
+        ViewHolder holder;
+
         if (convertView == null) {
-            convertView = LayoutInflater.from(context)
-                    .inflate(R.layout.list_result_exam, parent, false);
+            convertView = LayoutInflater.from(context).inflate(R.layout.list_result_exam, parent, false);
+            holder = new ViewHolder();
+            holder.tvQuestion = convertView.findViewById(R.id.tv_question);
+            holder.tvSelected = convertView.findViewById(R.id.tv_selected);
+            holder.tvCorrectAnswer = convertView.findViewById(R.id.tv_correct_answer);
+            convertView.setTag(holder);
+        } else {
+            holder = (ViewHolder) convertView.getTag();
         }
 
-        TextView tv_question = convertView.findViewById(R.id.tv_question);
-        TextView tv_selected = convertView.findViewById(R.id.tv_selected);
-        TextView tv_correct_answer = convertView.findViewById(R.id.tv_correct_answer);
+        Map<String, Object> question = questions.get(position);
 
-        Answer answer = questions.get(position);
-        tv_question.setText("Question " + answer.getId());
-        tv_selected.setText(answer.getSelectedAnswer() != null ?
-                answer.getSelectedAnswer() : "X");
-        tv_correct_answer.setText(answer.getCorrectAnswer());
+        // Lấy dữ liệu câu hỏi
+        String questionId = (String) question.get("questionId");
+        String selected = (String) question.get("selected");
+        String correct = (String) question.get("correct");
 
-        tv_correct_answer.setTextColor(Color.parseColor("#4CAF50")); // Green for all correct answers
+        // Cập nhật UI
+        holder.tvQuestion.setText("Câu " + questionId);
 
-        // Set color for selected answer
-        if (answer.getSelectedAnswer() != null) {
-            if (answer.getSelectedAnswer().equals(answer.getCorrectAnswer())) {
-                tv_selected.setTextColor(Color.parseColor("#4CAF50")); // Green
+        // Hiển thị đáp án đã chọn
+        if (selected != null && !selected.isEmpty()) {
+            holder.tvSelected.setText(selected);
+        } else {
+            holder.tvSelected.setText("X");
+        }
+
+        // Hiển thị đáp án đúng
+        holder.tvCorrectAnswer.setText(correct);
+
+        // Set màu sắc cho đáp án
+        if (selected != null && !selected.isEmpty()) {
+            if (selected.equals(correct)) {
+                // Đáp án đúng - màu xanh
+                holder.tvSelected.setTextColor(Color.parseColor("#4CAF50"));
             } else {
-                tv_selected.setTextColor(Color.parseColor("#F44336")); // Red
+                // Đáp án sai - màu đỏ
+                holder.tvSelected.setTextColor(Color.parseColor("#F44336"));
             }
         } else {
-            tv_selected.setTextColor(Color.parseColor("#F44336")); // Red for no answer
+            // Không chọn đáp án - màu đỏ
+            holder.tvSelected.setTextColor(Color.parseColor("#F44336"));
         }
 
+        // Đáp án đúng luôn màu xanh
+        holder.tvCorrectAnswer.setTextColor(Color.parseColor("#4CAF50"));
+
         return convertView;
+    }
+
+    static class ViewHolder {
+        TextView tvQuestion;
+        TextView tvSelected;
+        TextView tvCorrectAnswer;
     }
 }

@@ -3,6 +3,7 @@ package com.example.e_exam;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -59,15 +60,7 @@ public class StudentActivity extends AppCompatActivity {
         return true;
     }
 
-    public void showPdfContent(String fileLink) {
-        Intent intent = new Intent(this, ExamResultFragment.class);
-        intent.putExtra("fileLink", fileLink);
-        startActivity(intent);
-    }
-
-    public void showDashboardScore(int score) {
-        Intent intent = new Intent(this, ExamResultFragment.class);
-        intent.putExtra("score", score);
-        startActivity(intent);
+    public void setBottomNavVisibility(boolean visible) {
+        binding.bottomNavigationView.setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 }

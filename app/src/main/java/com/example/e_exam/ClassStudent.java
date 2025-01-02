@@ -36,7 +36,7 @@ public class ClassStudent extends AppCompatActivity {
 
     // Phương thức mở AddExam Activity
     private void openExamStudentActivity() {
-        Intent intent = new Intent(ClassStudent.this, ExamStudent.class);
+        Intent intent = new Intent(ClassStudent.this, ExamStudentFragment.class);
         intent.putExtra("CLASS_NAME", className);
         intent.putExtra("StudentId", StudentId);
         startActivity(intent);

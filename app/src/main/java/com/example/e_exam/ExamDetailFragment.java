@@ -4,11 +4,13 @@ import static android.content.ContentValues.TAG;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,9 +19,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -30,6 +30,9 @@ import com.example.e_exam.model.Question;
 import com.github.barteksc.pdfviewer.PDFView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.apache.poi.ss.usermodel.Row;
@@ -39,10 +42,14 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -56,6 +63,13 @@ public class ExamDetailFragment extends Fragment {
     private static final String ARG_DUE_DATE = "dueDate";
     private static final int PERMISSION_REQUEST_CODE = 1000;
     private static final int REQUEST_CODE_PICK_FILE = 1;
+
+    private String examId;
+    private FirebaseFirestore db;
+    private View mView;
+    private TextView classNameText, nameTestText, timerDueText, numberOfQuestionsText;
+    private Button submitButton;
+    private String pdfUrl;
     private String answerUrl;
     private String fileLink;
     private PDFView pdfView;
@@ -63,14 +77,14 @@ public class ExamDetailFragment extends Fragment {
     private QuestionMutipleChoiceAdapter questionMutipleChoiceAdapter;
     private RecyclerView rcvChooseAnswer;
 
-    public static ExamDetailFragment newInstance(String className, String name, long dueDate, String fileUri, String answerUrl , int questionCount) {
+    public static ExamDetailFragment newInstance(String examId, String className, String name, long dueDate, String pdfUrl, String answerUrl) {
         ExamDetailFragment fragment = new ExamDetailFragment();
         Bundle args = new Bundle();
+        args.putString("id", examId);
         args.putString(ARG_CLASS_NAME, className);
         args.putString(ARG_NAME, name);
         args.putLong(ARG_DUE_DATE, dueDate);
-        args.putString("fileUri", fileUri); // Duy trì URI file
-        args.putInt("questionCount", questionCount); // Số lượng câu hỏi
+        args.putString("pdfUrl", pdfUrl);
         args.putString("answerUrl", answerUrl);
         fragment.setArguments(args);
         return fragment;
@@ -79,48 +93,35 @@ public class ExamDetailFragment extends Fragment {
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_exam_detail, container, false);
+        mView = inflater.inflate(R.layout.fragment_exam_detail, container, false);
+
+        initUI();
+
+        db = FirebaseFirestore.getInstance();
 
         if (getArguments() != null) {
-            String pdfUrl = getArguments().getString("pdfUrl");
+            examId = getArguments().getString("id");
+            pdfUrl = getArguments().getString("pdfUrl");
             answerUrl = getArguments().getString("answerUrl");
-
-            Log.d(TAG, "Received PDF URL: " + pdfUrl);
-            Log.d(TAG, "Received Answer URL: " + answerUrl);
-
-            int questionCount = getArguments().getInt("questionCount", 40);
-
-            TextView questionCountText = view.findViewById(R.id.questionCountText);
-            if (questionCountText != null) {
-                questionCountText.setText("Number of Questions: " + questionCount);
-            }
-
-            pdfView = view.findViewById(R.id.pdfView);
-            if (pdfUrl != null && !pdfUrl.isEmpty()) {
-                displayPdf(pdfUrl);
-            } else {
-                Log.e(TAG, "PDF URL is null or empty");
-                Toast.makeText(getContext(), "PDF URL not found", Toast.LENGTH_SHORT).show();
-            }
-
-            rcvChooseAnswer = view.findViewById(R.id.rcvChooseAnswer);
-            rcvChooseAnswer.setLayoutManager(new LinearLayoutManager(getContext()));
-            questionList = new ArrayList<>();
-            for (int i = 1; i <= 40; i++) {
-                questionList.add(new Question("What is the correct answer to question " + i + "?",
-                        new String[] {"A", "B", "C", "D"}));
-            }
-
-            questionMutipleChoiceAdapter = new QuestionMutipleChoiceAdapter(questionList, new QuestionMutipleChoiceAdapter.OnAnswerSelectedListener() {
-                @Override
-                public void onAnswerSelected(int position, String selectedAnswer) {
-                    // Xử lý khi người dùng chọn đáp án
-                }
-            });
-            rcvChooseAnswer.setAdapter(questionMutipleChoiceAdapter);
+            loadExamDetailsFromFireStore(pdfUrl);
         }
 
-        Button submitButton = view.findViewById(R.id.submitButton);
+        onClickListener();
+
+        return mView;
+    }
+
+    private void initUI(){
+        classNameText = mView.findViewById(R.id.classNameText);
+        nameTestText = mView.findViewById(R.id.nameTestText);
+        numberOfQuestionsText = mView.findViewById(R.id.numberOfQuestionsText);
+        pdfView = mView.findViewById(R.id.pdfView);
+        timerDueText = mView.findViewById(R.id.timerDueText);
+        rcvChooseAnswer = mView.findViewById(R.id.rcvChooseAnswer);
+        submitButton = mView.findViewById(R.id.submitButton);
+    }
+
+    private void onClickListener(){
         submitButton.setOnClickListener(v -> {
             Log.d(TAG, "Answer URL: " + answerUrl); // Thêm logging
             if (answerUrl != null && !answerUrl.isEmpty()) {
@@ -130,31 +131,117 @@ public class ExamDetailFragment extends Fragment {
                 Toast.makeText(getContext(), "Answer file not found", Toast.LENGTH_SHORT).show();
             }
         });
-
-        return view;
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_PICK_FILE && resultCode == Activity.RESULT_OK) {
-            if (data != null) {
-                Uri fileUri = data.getData();
-                checkAnswers(fileUri);
-            }
+    private void loadExamDetailsFromFireStore(String pdfUrl) {
+        Log.d(TAG, "PDF URL: " + pdfUrl);
+        if (examId == null || examId.isEmpty()) {
+            Toast.makeText(getContext(), "Exam ID not found", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        db.collection("exams").document(examId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        updateUIWithFireStoreData(documentSnapshot);
+                    } else {
+                        Toast.makeText(getContext(), "Exam not found", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(getContext(), "Error loading exam details: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void updateUIWithFireStoreData(DocumentSnapshot documentSnapshot) {
+        String className = documentSnapshot.getString("className");
+        String testName = documentSnapshot.getString("name");
+
+        Long dueDate = documentSnapshot.getLong("deadline");
+        Long timeLimit = documentSnapshot.getLong("timeLimit");
+
+        int numberOfQuestions = documentSnapshot.getLong("numberOfQuestions").intValue();
+        String pdfUrl = documentSnapshot.getString("pdfUrl");
+        answerUrl = documentSnapshot.getString("answerUrl");
+
+        classNameText.setText(className != null ? className : "N/A");
+        nameTestText.setText(testName != null ? testName : "N/A");
+        numberOfQuestionsText.setText(String.valueOf(numberOfQuestions));
+
+        if (pdfUrl != null && !pdfUrl.isEmpty()) {
+            downloadAndDisplayPdf(pdfUrl);
+        } else {
+            Toast.makeText(getContext(), "No PDF URL provided", Toast.LENGTH_SHORT).show();
+        }
+
+        if (dueDate > System.currentTimeMillis()) {
+            countDownTimer(timeLimit);
+        } else {
+            timerDueText.setText("Expired");
+        }
+
+        displayChooseAnswer(numberOfQuestions); // Hiển thị danh sách câu hỏi dựa trên số lượng
+    }
+
+    private void displayChooseAnswer(int numberOfQuestions) {
+        rcvChooseAnswer.setLayoutManager(new LinearLayoutManager(getContext()));
+        questionList = new ArrayList<>();
+        for (int i = 1; i <= numberOfQuestions; i++) {
+            questionList.add(new Question("Câu " + i + ": Chọn câu trả lời đúng",
+                    new String[]{"A", "B", "C", "D"}));
+        }
+
+        questionMutipleChoiceAdapter = new QuestionMutipleChoiceAdapter(questionList, (position, selectedAnswer) -> {
+            // Xử lý khi người dùng chọn đáp án
+        });
+        rcvChooseAnswer.setAdapter(questionMutipleChoiceAdapter);
+    }
+
+    private void countDownTimer(long timeLimit) {
+        long remainingTimeMillis = timeLimit * 60 * 1000;
+
+        if (remainingTimeMillis > 0) {
+            new CountDownTimer(remainingTimeMillis, 1000) {
+                @Override
+                public void onTick(long millisUntilFinished) {
+                    long minutes = TimeUnit.MILLISECONDS.toMinutes(millisUntilFinished) % 60;
+                    long seconds = TimeUnit.MILLISECONDS.toSeconds(millisUntilFinished) % 60;
+
+                    String timeFormatted = String.format("%02d:%02d", minutes, seconds);
+                    timerDueText.setText(timeFormatted);
+                }
+
+                @Override
+                public void onFinish() {
+                    submitButton.setEnabled(false);
+
+                    // Hiển thị ProgressDialog
+                    ProgressDialog progressDialog = new ProgressDialog(getContext());
+                    progressDialog.setMessage("Đã hết giờ làm bài. Vui lòng nộp bài!");
+                    progressDialog.setCancelable(false);
+                    progressDialog.setButton(ProgressDialog.BUTTON_POSITIVE, "Nộp bài", (dialog, which) -> {
+                        dialog.dismiss();
+                        downloadAndCheckAnswers(answerUrl);
+                    });
+                    progressDialog.show();
+                }
+            }.start();
+        } else {
+            submitButton.setEnabled(false);
         }
     }
 
-    private void displayPdf(String pdfUrl) {
-        Log.d(TAG, "PDF URL: " + pdfUrl);
 
-        // Hiển thị loading indicator
+    private void downloadAndDisplayPdf(String pdfUrl) {
         ProgressDialog progressDialog = new ProgressDialog(getContext());
         progressDialog.setMessage("Loading PDF...");
         progressDialog.show();
 
-        // Tạo request để download file
-        OkHttpClient client = new OkHttpClient();
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .build();
+
         Request request = new Request.Builder()
                 .url(pdfUrl)
                 .build();
@@ -162,6 +249,8 @@ public class ExamDetailFragment extends Fragment {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                if (getActivity() == null) return;
+
                 getActivity().runOnUiThread(() -> {
                     progressDialog.dismiss();
                     Toast.makeText(getContext(), "Error loading PDF: " + e.getMessage(),
@@ -171,6 +260,8 @@ public class ExamDetailFragment extends Fragment {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (getActivity() == null) return;
+
                 if (!response.isSuccessful()) {
                     getActivity().runOnUiThread(() -> {
                         progressDialog.dismiss();
@@ -180,10 +271,8 @@ public class ExamDetailFragment extends Fragment {
                     return;
                 }
 
-                // Đọc bytes từ response
                 byte[] pdfBytes = response.body().bytes();
 
-                // Hiển thị PDF trên UI thread
                 getActivity().runOnUiThread(() -> {
                     try {
                         pdfView.fromBytes(pdfBytes)
@@ -192,11 +281,9 @@ public class ExamDetailFragment extends Fragment {
                                 .enableDoubletap(true)
                                 .defaultPage(0)
                                 .onLoad(nbPages -> {
-                                    Log.d(TAG, "PDF loaded successfully. Pages: " + nbPages);
                                     progressDialog.dismiss();
                                 })
                                 .onError(t -> {
-                                    Log.e(TAG, "Error displaying PDF", t);
                                     progressDialog.dismiss();
                                     Toast.makeText(getContext(),
                                             "Error displaying PDF: " + t.getMessage(),
@@ -205,7 +292,6 @@ public class ExamDetailFragment extends Fragment {
                                 .load();
                     } catch (Exception e) {
                         progressDialog.dismiss();
-                        Log.e(TAG, "Error displaying PDF", e);
                         Toast.makeText(getContext(),
                                 "Error displaying PDF: " + e.getMessage(),
                                 Toast.LENGTH_LONG).show();
@@ -213,6 +299,131 @@ public class ExamDetailFragment extends Fragment {
                 });
             }
         });
+    }
+
+    private void downloadAndCheckAnswers(String answerUrl) {
+        if (getActivity() == null) return;
+
+        // Kiểm tra answerUrl
+        if (answerUrl == null || answerUrl.isEmpty()) {
+            Toast.makeText(getContext(), "Answer URL is invalid", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ProgressDialog progressDialog = new ProgressDialog(getContext());
+        progressDialog.setMessage("Đang nộp bài ...");
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .build();
+
+        Request request = new Request.Builder()
+                .url(answerUrl)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (!response.isSuccessful() || response.body() == null) {
+                    handleError(progressDialog, "Failed to download answer file");
+                    return;
+                }
+
+                try {
+                    Map<Integer, String> userAnswers = questionMutipleChoiceAdapter.getUserAnswers();
+                    List<Answer> results = processAnswers(response.body().byteStream(), userAnswers);
+
+                    String examId = getArguments().getString("id"); // Sửa từ "questionId" thành "id"
+                    FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
+                    if (examId == null || currentUser == null) {
+                        handleError(progressDialog, "Missing exam ID or user not logged in");
+                        return;
+                    }
+
+                    List<Map<String, Object>> answerList = new ArrayList<>();
+                    for (Answer answer : results) {
+                        Map<String, Object> answerMap = new HashMap<>();
+                        answerMap.put("questionId", answer.getId());
+                        answerMap.put("selected", answer.getSelectedAnswer());
+                        answerMap.put("correct", answer.getCorrectAnswer());
+                        answerList.add(answerMap);
+                    }
+
+                    long submittedAt = System.currentTimeMillis();
+                    int score = calculateScore(results);
+
+                    Map<String, Object> submissionData = new HashMap<>();
+                    submissionData.put("answers", answerList);
+                    submissionData.put("score", score);
+                    submissionData.put("submittedAt", submittedAt);
+                    submissionData.put("userId", currentUser.getUid());
+
+                    if (getActivity() == null) {
+                        progressDialog.dismiss();
+                        return;
+                    }
+
+                    getActivity().runOnUiThread(() -> {
+                        // Cập nhật Firestore và Realtime Database
+                        saveSubmissionData(examId, currentUser.getUid(), submissionData, answerList, progressDialog);
+                    });
+
+                } catch (Exception e) {
+                    handleError(progressDialog, "Error processing answers: " + e.getMessage());
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                handleError(progressDialog, "Error downloading answer file: " + e.getMessage());
+            }
+        });
+    }
+
+    private void saveSubmissionData(String examId, String userId, Map<String, Object> submissionData,
+                                    List<Map<String, Object>> answerList, ProgressDialog progressDialog) {
+        // Tạo một document riêng để lưu trạng thái làm bài của từng user
+        Map<String, Object> userExamStatus = new HashMap<>();
+        userExamStatus.put("status", "completed");
+        userExamStatus.put("submittedAt", System.currentTimeMillis());
+
+        // Lưu trạng thái làm bài của user
+        db.collection("exams")
+                .document(examId)
+                .collection("userStatus")
+                .document(userId)
+                .set(userExamStatus)
+                .addOnSuccessListener(aVoid -> {
+                    // Lưu kết quả vào Firestore
+                    db.collection("examResults")
+                            .document(examId)
+                            .collection("submissions")
+                            .document(userId)
+                            .set(submissionData)
+                            .addOnSuccessListener(documentReference -> {
+                                // Lưu kết quả vào Realtime Database
+                                DatabaseReference realtimeRef = FirebaseDatabase.getInstance()
+                                        .getReference("test_submissions")
+                                        .child(examId)
+                                        .child(userId);
+
+                                realtimeRef.setValue(submissionData)
+                                        .addOnSuccessListener(unused -> {
+                                            showResults(answerList, progressDialog);
+                                        })
+                                        .addOnFailureListener(e -> handleError(progressDialog,
+                                                "Error saving to Realtime DB: " + e.getMessage()));
+                            })
+                            .addOnFailureListener(e -> handleError(progressDialog,
+                                    "Error saving to Firestore: " + e.getMessage()));
+                })
+                .addOnFailureListener(e -> handleError(progressDialog,
+                        "Error updating user exam status: " + e.getMessage()));
     }
 
     private void checkAnswers(Uri excelFileUri) {
@@ -267,113 +478,6 @@ public class ExamDetailFragment extends Fragment {
         }
     }
 
-    private void downloadAndCheckAnswers(String answerUrl) {
-        ProgressDialog progressDialog = new ProgressDialog(getContext());
-        progressDialog.setMessage("Checking answers...");
-        progressDialog.show();
-
-        OkHttpClient client = new OkHttpClient();
-        Request request = new Request.Builder()
-                .url(answerUrl)
-                .build();
-
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                if (!response.isSuccessful()) {
-                    handleError(progressDialog, "Failed to download answer file");
-                    return;
-                }
-
-                try {
-                    Map<Integer, String> userAnswers = questionMutipleChoiceAdapter.getUserAnswers();
-                    List<Answer> results = processAnswers(response.body().byteStream(), userAnswers);
-
-                    FirebaseFirestore db = FirebaseFirestore.getInstance();
-                    String examId = getArguments().getString("examId");
-                    FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-
-                    if (examId != null && currentUser != null) {
-                        // Chuyển đổi List<Answer> thành List<Map>
-                        List<Map<String, Object>> resultMaps = new ArrayList<>();
-                        for (Answer answer : results) {
-                            Map<String, Object> answerMap = new HashMap<>();
-                            answerMap.put("id", answer.getId());
-                            answerMap.put("selectedAnswer", answer.getSelectedAnswer());
-                            answerMap.put("correctAnswer", answer.getCorrectAnswer());
-                            resultMaps.add(answerMap);
-                        }
-
-                        Map<String, Object> examResult = new HashMap<>();
-                        examResult.put("results", resultMaps);
-                        examResult.put("completedAt", System.currentTimeMillis());
-                        examResult.put("score", calculateScore(results));
-                        examResult.put("userId", currentUser.getUid());
-                        examResult.put("examName", getArguments().getString("name"));
-
-                        // Cập nhật trạng thái và lưu kết quả
-                        db.collection("exams").document(examId)
-                                .update("status", "completed")
-                                .addOnSuccessListener(aVoid -> {
-                                    db.collection("examResults")
-                                            .document(examId + "_" + currentUser.getUid())
-                                            .set(examResult)
-                                            .addOnSuccessListener(documentReference -> {
-                                                showResults(resultMaps, progressDialog);
-                                            })
-                                            .addOnFailureListener(e -> handleError(progressDialog,
-                                                    "Error saving results: " + e.getMessage()));
-                                })
-                                .addOnFailureListener(e -> handleError(progressDialog,
-                                        "Error updating exam status: " + e.getMessage()));
-                    }
-                } catch (Exception e) {
-                    handleError(progressDialog, "Error processing answers: " + e.getMessage());
-                }
-            }
-
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                handleError(progressDialog, "Error downloading answer file: " + e.getMessage());
-            }
-        });
-    }
-
-    private void showResults(List<Map<String, Object>> resultMaps, ProgressDialog progressDialog) {
-        requireActivity().runOnUiThread(() -> {
-            progressDialog.dismiss();
-            ExamResultFragment resultFragment = new ExamResultFragment();
-            Bundle args = new Bundle();
-            args.putSerializable("results", new ArrayList<>(resultMaps));
-            args.putString("examName", getArguments().getString("name", "Exam"));
-            resultFragment.setArguments(args);
-
-            requireActivity().getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.fragment_container, resultFragment)
-                    .addToBackStack(null)
-                    .commit();
-        });
-    }
-
-    private void handleError(ProgressDialog progressDialog, String message) {
-        requireActivity().runOnUiThread(() -> {
-            progressDialog.dismiss();
-            Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
-        });
-    }
-
-    private int calculateScore(List<Answer> results) {
-        int correct = 0;
-        for (Answer answer : results) {
-            if (answer.getSelectedAnswer() != null &&
-                    answer.getSelectedAnswer().equals(answer.getCorrectAnswer())) {
-                correct++;
-            }
-        }
-        return correct;
-    }
-
     private List<Answer> processAnswers(InputStream inputStream, Map<Integer, String> userAnswers) throws IOException {
         List<Answer> results = new ArrayList<>();
 
@@ -405,15 +509,96 @@ public class ExamDetailFragment extends Fragment {
         return results;
     }
 
+    private int calculateScore(List<Answer> results) {
+        int correct = 0;
+        for (Answer answer : results) {
+            if (answer.getSelectedAnswer() != null &&
+                    answer.getSelectedAnswer().equals(answer.getCorrectAnswer())) {
+                correct++;
+            }
+        }
+        return correct;
+    }
+
+    private void showResults(List<Map<String, Object>> answerList, ProgressDialog progressDialog) {
+        if (!isAdded()) return;
+
+        requireActivity().runOnUiThread(() -> {
+            progressDialog.dismiss();
+
+            // Create resultData map với cấu trúc phù hợp
+            Map<String, Object> resultData = new HashMap<>();
+
+            for (int i = 0; i < answerList.size(); i++) {
+                Map<String, Object> questionData = new HashMap<>();
+                Map<String, Object> answer = answerList.get(i);
+
+                questionData.put("questionId", String.valueOf(i + 1));
+                questionData.put("selected", answer.get("selected"));
+                questionData.put("correct", answer.get("correct"));
+
+                resultData.put("question_" + (i + 1), questionData);
+            }
+
+            // Chuyển sang ExamResultFragment
+            ExamResultFragment resultFragment = new ExamResultFragment();
+            Bundle args = new Bundle();
+            args.putSerializable("resultData", (HashMap<String, Object>) resultData);
+            args.putString("examName", getArguments().getString("name", "Exam"));
+            args.putString("className", getArguments().getString("className", "Class"));
+            resultFragment.setArguments(args);
+
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragment_container, resultFragment)
+                    .addToBackStack(null)
+                    .commit();
+        });
+    }
+
+    private void handleError(ProgressDialog progressDialog, String message) {
+        requireActivity().runOnUiThread(() -> {
+            progressDialog.dismiss();
+            Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show();
+        });
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                displayPdf(fileLink); // Thực hiện mở tài liệu khi quyền đã được cấp
+                downloadAndDisplayPdf(fileLink); // Thực hiện mở tài liệu khi quyền đã được cấp
             } else {
                 Toast.makeText(getContext(), "Permission denied. Cannot open PDF.", Toast.LENGTH_SHORT).show();
             }
+        }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_PICK_FILE && resultCode == Activity.RESULT_OK) {
+            if (data != null) {
+                Uri fileUri = data.getData();
+                checkAnswers(fileUri);
+            }
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (getActivity() instanceof StudentActivity) {
+            ((StudentActivity) getActivity()).setBottomNavVisibility(false);
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (getActivity() instanceof StudentActivity) {
+            ((StudentActivity) getActivity()).setBottomNavVisibility(true);
         }
     }
 }

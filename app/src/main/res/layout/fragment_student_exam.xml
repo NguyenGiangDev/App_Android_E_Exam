@@ -7,33 +7,45 @@
     android:gravity="center_horizontal"
     tools:context=".StudentExamFragment">
 
-    <!-- Button Section -->
-<!--    <LinearLayout-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:orientation="horizontal"-->
-<!--        android:layout_margin="@dimen/activity_vertical_margin">-->
 
-<!--        <com.google.android.material.button.MaterialButton-->
-<!--            android:layout_width="132dp"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:text="@string/fte_all_exam"-->
-<!--            android:gravity="center_vertical"-->
-<!--            android:textSize="12sp"-->
-<!--            android:layout_weight="1"/>-->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_margin="@dimen/activity_vertical_margin">
 
-<!--        <com.google.android.material.button.MaterialButton-->
-<!--            android:layout_width="132dp"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:text="@string/fte_pending_exam"-->
-<!--            android:gravity="center_vertical"-->
-<!--            android:textSize="12sp"-->
-<!--            android:textColor="@color/primary"-->
-<!--            android:backgroundTint="@color/primary_fixed"-->
-<!--            android:layout_marginStart="@dimen/margin_basex2"-->
-<!--            android:layout_weight="1"/>-->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAllExam"
+            android:layout_width="132dp"
+            android:layout_height="wrap_content"
+            android:text="@string/fte_all_exam"
+            android:gravity="center_vertical"
+            android:textSize="12sp"
+            android:layout_weight="1"/>
 
-<!--    </LinearLayout>-->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDoneExam"
+            android:layout_width="132dp"
+            android:layout_height="wrap_content"
+            android:text="Đã xong"
+            android:gravity="center_vertical"
+            android:textSize="12sp"
+            android:backgroundTint="@color/green"
+            android:layout_weight="1"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPendingExam"
+            android:layout_width="132dp"
+            android:layout_height="wrap_content"
+            android:text="@string/fte_pending_exam"
+            android:gravity="center_vertical"
+            android:textSize="12sp"
+            android:textColor="@color/white"
+            android:backgroundTint="@color/primary"
+            android:layout_marginStart="@dimen/margin_basex2"
+            android:layout_weight="1"/>
+
+    </LinearLayout>
 
     <!-- RecyclerView Section -->
     <androidx.recyclerview.widget.RecyclerView

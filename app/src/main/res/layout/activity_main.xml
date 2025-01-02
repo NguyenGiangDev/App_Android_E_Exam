@@ -7,14 +7,36 @@
     android:orientation="vertical"
     android:gravity="center"
     android:layout_margin="24dp"
-    android:id="@+id/loginLayout"
-    android:background="@android:color/white">
+    android:id="@+id/loginLayout">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="32dp"
+        android:gravity="center">
+
+        <ImageView
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:src="@drawable/eexamlogo"
+            android:layout_marginVertical="32dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Exam"
+            android:textSize="36sp"
+            android:textColor="@color/primary"
+            android:layout_marginStart="16dp"
+            android:fontFamily="sans-serif-medium"/>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/loginTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="LOGIN"
+        android:text="Đăng nhập"
         android:textSize="24sp"
         android:textColor="@android:color/black"
         android:layout_marginBottom="32dp"
@@ -37,7 +59,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
-        android:hint="Password">
+        android:hint="Mật khẩu">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/passwordInput"
@@ -50,12 +72,11 @@
         android:id="@+id/loginButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="LOGIN"
+        android:text="ĐĂNG NHẬP"
         android:textAllCaps="false"
         android:textColor="@android:color/white"
         android:layout_marginBottom="16dp"
-        app:cornerRadius="50dp"
-        android:backgroundTint="@color/purple_700" />
+        app:cornerRadius="50dp" />
 
 
     <TextView
@@ -63,7 +84,7 @@
         android:layout_width="wrap_content"
         android:layout_height="29dp"
         android:layout_gravity="center"
-        android:text="REGISTER"
+        android:text="ĐĂNG KÍ"
         android:textColor="@color/purple_700"
         android:textSize="14sp" />
 
@@ -72,7 +93,7 @@
         android:layout_width="match_parent"
         android:layout_height="29dp"
         android:layout_gravity="center"
-        android:text="Forget Password?"
+        android:text="Quên mật khẩu?"
         android:textAlignment="center"
         android:textColor="@color/purple_700"
         android:textSize="14sp" />

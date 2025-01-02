@@ -11,6 +11,7 @@
         android:layout_centerHorizontal="true"
         android:text="Danh sách các bài tập"
         android:textSize="24sp"
+        android:layout_marginBottom="@dimen/margin_basex2"
         android:textColor="@android:color/black" />
 
     <androidx.recyclerview.widget.RecyclerView

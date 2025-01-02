@@ -2,7 +2,10 @@ package com.example.e_exam;
 
 import static android.app.Activity.RESULT_OK;
 
+import static org.apache.xmlbeans.impl.tool.StreamInstanceValidator.validateFiles;
+
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.ProgressDialog;
 import android.app.TimePickerDialog;
@@ -27,6 +30,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -43,14 +47,20 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class TestCreateFragment extends Fragment {
     private static final String TAG = "TestCreate";
     private static final int PICK_PDF_REQUEST = 1;
     private static final int PICK_EXCEL_REQUEST = 2;
+    private static final int MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    private static final String PDF_STORAGE_PATH = "exams/";
+    private static final String EXCEL_STORAGE_PATH = "answers/";
 
+    private View mView;
     private String teacherId;
-    private EditText testNameInput;
+    private EditText testNameInput, timeLimitInput, numberQuestionInput;
+    private Button generateFileButton, createTestButton, uploadAnswerButton;
     private Spinner classPicker;
     private TextView deadlinePicker;
     private Uri pdfUri;
@@ -59,6 +69,9 @@ public class TestCreateFragment extends Fragment {
     private ClassInfo selectedClassInfo;
     private List<ClassInfo> classList;
     private DatabaseReference databaseReference;
+    private ProgressDialog progressDialog;
+    private FirebaseFirestore firestore;
+    private StorageReference storageReference;
 
     // Class to hold class information
     private static class ClassInfo {
@@ -93,48 +106,135 @@ public class TestCreateFragment extends Fragment {
         return fragment;
     }
 
+    private interface UploadErrorHandler {
+        void onError(String fileType, Exception e);
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_test_create, container, false);
+        mView = inflater.inflate(R.layout.fragment_test_create, container, false);
         if (getArguments() != null) {
             teacherId = getArguments().getString("teacherId");
         }
 
-        // Initialize Firebase
-        FirebaseApp.initializeApp(requireContext());
-        databaseReference = FirebaseDatabase.getInstance().getReference("tests");
-
-        // Initialize the classList
-        classList = new ArrayList<>();
-
-        // Bind UI elements
-        testNameInput = view.findViewById(R.id.testNameInput);
-        classPicker = view.findViewById(R.id.classPicker);
-        deadlinePicker = view.findViewById(R.id.deadlinePicker);
-
-        Button generateFileButton = view.findViewById(R.id.generateFileButton);
-        Button createTestButton = view.findViewById(R.id.createTestButton);
-        Button uploadAnswerButton = view.findViewById(R.id.uploadAnswerButton);
-
+        initializeFirebase();
+        initUI();
         setupClassPicker();
         setupDeadlinePicker();
+        setupClickListeners();
 
-        generateFileButton.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("application/pdf");
-            startActivityForResult(Intent.createChooser(intent, "Select PDF"), PICK_PDF_REQUEST);
-        });
+        return mView;
+    }
 
-        uploadAnswerButton.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            startActivityForResult(Intent.createChooser(intent, "Select Excel File"), PICK_EXCEL_REQUEST);
-        });
+    private void initializeFirebase() {
+        FirebaseApp.initializeApp(requireContext());
+        databaseReference = FirebaseDatabase.getInstance().getReference("tests");
+        firestore = FirebaseFirestore.getInstance();
+        storageReference = FirebaseStorage.getInstance().getReference();
+        classList = new ArrayList<>();
+    }
 
-        createTestButton.setOnClickListener(v -> createTest());
+    private void initUI(){
+        testNameInput = mView.findViewById(R.id.testNameInput);
+        timeLimitInput = mView.findViewById(R.id.timeLimitInput);
+        numberQuestionInput = mView.findViewById(R.id.numberQuestionInput);
+        classPicker = mView.findViewById(R.id.classPicker);
+        deadlinePicker = mView.findViewById(R.id.deadlinePicker);
+        generateFileButton = mView.findViewById(R.id.generateFileButton);
+        createTestButton = mView.findViewById(R.id.createTestButton);
+        uploadAnswerButton = mView.findViewById(R.id.uploadAnswerButton);
+    }
 
-        return view;
+    private void setupClickListeners() {
+        generateFileButton.setOnClickListener(v -> pickFile("application/pdf", PICK_PDF_REQUEST));
+        uploadAnswerButton.setOnClickListener(v -> pickFile("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", PICK_EXCEL_REQUEST));
+        createTestButton.setOnClickListener(v -> validateAndCreateTest());
+    }
+
+    private void pickFile(String mimeType, int requestCode) {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType(mimeType);
+        startActivityForResult(Intent.createChooser(intent, "Select File"), requestCode);
+    }
+
+    private void validateAndCreateTest() {
+        if (!validateInputs()) return;
+        if (!validateFiles()) return;
+        createTest();
+    }
+
+    private boolean validateInputs() {
+        // Validate test name
+        String testName = testNameInput.getText().toString().trim();
+        if (testName.isEmpty()) {
+            showError("Vui lòng nhập tên bài kiểm tra");
+            testNameInput.requestFocus();
+            return false;
+        }
+
+        // Validate time limit
+        try {
+            int timeLimit = Integer.parseInt(timeLimitInput.getText().toString().trim());
+            if (timeLimit <= 0) {
+                showError("Thời gian làm bài phải lớn hơn 0");
+                timeLimitInput.requestFocus();
+                return false;
+            }
+        } catch (NumberFormatException e) {
+            showError("Vui lòng nhập thời gian hợp lệ");
+            timeLimitInput.requestFocus();
+            return false;
+        }
+
+        // Validate question count
+        try {
+            int questionCount = Integer.parseInt(numberQuestionInput.getText().toString().trim());
+            if (questionCount <= 0) {
+                showError("Số lượng câu hỏi phải lớn hơn 0");
+                numberQuestionInput.requestFocus();
+                return false;
+            }
+        } catch (NumberFormatException e) {
+            showError("Vui lòng nhập số lượng câu hỏi hợp lệ");
+            numberQuestionInput.requestFocus();
+            return false;
+        }
+
+        // Validate deadline
+        if (selectedDeadline == null || selectedDeadline.before(Calendar.getInstance())) {
+            showError("Vui lòng chọn thời hạn nộp bài hợp lệ");
+            return false;
+        }
+
+        // Validate class selection
+        if (selectedClassInfo == null) {
+            showError("Vui lòng chọn lớp học");
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean validateFiles() {
+        if (pdfUri == null) {
+            showError("Vui lòng chọn tệp PDF");
+            return false;
+        }
+        if (excelUri == null) {
+            showError("Vui lòng chọn tệp đáp án");
+            return false;
+        }
+        return true;
+    }
+
+    private void showError(String message) {
+        if (isAdded()) {
+            new AlertDialog.Builder(requireContext())
+                    .setMessage(message)
+                    .setPositiveButton("OK", null)
+                    .show();
+        }
     }
 
     private void setupClassPicker() {
@@ -210,61 +310,99 @@ public class TestCreateFragment extends Fragment {
 
     private void createTest() {
         String testName = testNameInput.getText().toString().trim();
+        String timeLimit = timeLimitInput.getText().toString().trim();
+        String numberQuestion = numberQuestionInput.getText().toString().trim();
 
         if (testName.isEmpty()) {
-            Toast.makeText(getContext(), "Please enter test name", Toast.LENGTH_SHORT).show();
+            showAlertDialog("Vui lòng nhập tên bài kiểm tra");
+            testNameInput.requestFocus();
+            return;
+        }
+        if (timeLimit.isEmpty()) {
+            showAlertDialog("Vui lòng nhập thời gian làm bài");
+            timeLimitInput.requestFocus();
+            return;
+        }
+        if (numberQuestion.isEmpty()) {
+            showAlertDialog("Vui lòng nhập số lượng câu hỏi");
+            numberQuestionInput.requestFocus();
             return;
         }
         if (selectedDeadline == null) {
-            Toast.makeText(getContext(), "Please set deadline", Toast.LENGTH_SHORT).show();
+            showAlertDialog("Vui lòng đặt thời hạn nộp bài");
             return;
         }
         if (selectedClassInfo == null) {
-            Toast.makeText(getContext(), "Please select class", Toast.LENGTH_SHORT).show();
+            showAlertDialog("Vui lòng chọn lớp học");
             return;
         }
         if (pdfUri == null) {
-            Toast.makeText(getContext(), "Please select PDF file", Toast.LENGTH_SHORT).show();
+            showAlertDialog("Vui lòng chọn tệp PDF");
             return;
         }
         if (excelUri == null) {
-            Toast.makeText(getContext(), "Please select answer file", Toast.LENGTH_SHORT).show();
+            showAlertDialog("Vui lòng chọn tệp đáp án");
             return;
         }
 
         uploadFilesToFirebase(testName);
     }
 
+    private void showAlertDialog(String message) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setMessage(message)
+                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
+                .show();
+    }
+
+
     private void uploadFilesToFirebase(String testName) {
-        FirebaseStorage storage = FirebaseStorage.getInstance();
-        StorageReference pdfRef = storage.getReference().child("exams/" + System.currentTimeMillis() + ".pdf");
-        StorageReference excelRef = storage.getReference().child("answers/" + System.currentTimeMillis() + ".xlsx");
+        showProgressDialog("Đang tải lên tệp...");
 
-        ProgressDialog progressDialog = new ProgressDialog(getContext());
-        progressDialog.setTitle("Uploading files...");
-        progressDialog.show();
+        String pdfFileName = generateSecureFileName("pdf");
+        String excelFileName = generateSecureFileName("xlsx");
 
-        // Upload PDF file
-        UploadTask pdfUploadTask = pdfRef.putFile(pdfUri);
-        pdfUploadTask.addOnSuccessListener(taskSnapshot -> {
-            pdfRef.getDownloadUrl().addOnSuccessListener(pdfUrl -> {
-                // Upload Excel file
-                UploadTask excelUploadTask = excelRef.putFile(excelUri);
-                excelUploadTask.addOnSuccessListener(excelTaskSnapshot -> {
-                    excelRef.getDownloadUrl().addOnSuccessListener(excelUrl -> {
-                        fetchStudentsAndSaveTest(testName, pdfUrl.toString(), excelUrl.toString());
-                        progressDialog.dismiss();
-                        Toast.makeText(getContext(), "Files uploaded successfully!", Toast.LENGTH_SHORT).show();
-                    });
-                }).addOnFailureListener(e -> {
-                    progressDialog.dismiss();
-                    Toast.makeText(getContext(), "Excel upload failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        StorageReference pdfRef = storageReference.child(PDF_STORAGE_PATH + pdfFileName);
+        StorageReference excelRef = storageReference.child(EXCEL_STORAGE_PATH + excelFileName);
+
+        UploadErrorHandler errorHandler = (fileType, e) -> {
+            hideProgressDialog();
+            Log.e(TAG, fileType + " upload failed", e);
+            showError(fileType + " tải lên thất bại: " + e.getMessage());
+        };
+
+        // Upload PDF
+        uploadFile(pdfUri, pdfRef)
+                .addOnSuccessListener(pdfUrl -> {
+                    // Upload Excel after PDF success
+                    uploadFile(excelUri, excelRef)
+                            .addOnSuccessListener(excelUrl -> {
+                                hideProgressDialog();
+                                fetchStudentsAndSaveTest(testName, pdfUrl, excelUrl);
+                            })
+                            .addOnFailureListener(e -> errorHandler.onError("Excel", e));
+                })
+                .addOnFailureListener(e -> errorHandler.onError("PDF", e));
+    }
+
+    private Task<String> uploadFile(Uri fileUri, StorageReference ref) {
+        return ref.putFile(fileUri)
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful()) {
+                        throw task.getException();
+                    }
+                    return ref.getDownloadUrl();
+                })
+                .continueWith(task -> {
+                    if (!task.isSuccessful()) {
+                        throw task.getException();
+                    }
+                    return task.getResult().toString();
                 });
-            });
-        }).addOnFailureListener(e -> {
-            progressDialog.dismiss();
-            Toast.makeText(getContext(), "PDF upload failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        });
+    }
+
+    private String generateSecureFileName(String extension) {
+        return UUID.randomUUID().toString() + "." + extension;
     }
 
     private void fetchStudentsAndSaveTest(String testName, String pdfUrl, String answerUri) {
@@ -292,42 +430,87 @@ public class TestCreateFragment extends Fragment {
     }
 
     private void saveTestToDatabase(String testName, String pdfUrl, List<String> studentIds, String answerUri) {
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        String examId = generateExamId(selectedClassInfo.getName(), testName);
+        Map<String, Object> examData = createExamData(examId, testName, pdfUrl, answerUri, studentIds);
 
+        firestore.collection("exams")
+                .document(examId)
+                .set(examData)
+                .addOnSuccessListener(aVoid ->
+                        databaseReference.child(examId).setValue(examData)
+                                .addOnSuccessListener(unused -> {
+                                    Log.d(TAG, "Exam saved successfully!");
+                                    showSuccess("Bài kiểm tra đã được tạo thành công!");
+                                    clearForm();
+                                    if (getFragmentManager() != null) {
+                                        getFragmentManager().popBackStack();
+                                    }
+                                })
+                                .addOnFailureListener(e -> handleDatabaseError("Realtime Database", e)))
+                .addOnFailureListener(e -> handleDatabaseError("Firestore", e));
+    }
+
+    private String generateExamId(String className, String testName) {
+        String baseId = className + "-" + testName;
+        return baseId.replaceAll("[^a-zA-Z0-9-_]", "_");
+    }
+
+    private Map<String, Object> createExamData(String examId, String testName,
+                                               String pdfUrl, String answerUri,
+                                               List<String> studentIds) {
         Map<String, Object> examData = new HashMap<>();
+        examData.put("id", examId);
         examData.put("name", testName);
         examData.put("className", selectedClassInfo.getName());
         examData.put("classId", selectedClassInfo.getId());
         examData.put("teacherId", teacherId);
+        examData.put("numberOfQuestions", Integer.parseInt(numberQuestionInput.getText().toString().trim()));
+        examData.put("timeLimit", Integer.parseInt(timeLimitInput.getText().toString().trim()));
         examData.put("deadline", selectedDeadline.getTimeInMillis());
         examData.put("createdAt", System.currentTimeMillis());
         examData.put("status", "pending");
         examData.put("pdfUrl", pdfUrl);
         examData.put("answerUrl", answerUri);
         examData.put("studentIds", studentIds);
+        return examData;
+    }
 
-        db.collection("exams")
-                .add(examData)
-                .addOnSuccessListener(documentReference -> {
-                    String examId = documentReference.getId();
-                    documentReference.update("id", examId)
-                            .addOnSuccessListener(aVoid -> {
-                                Toast.makeText(getContext(), "Test created successfully!",
-                                        Toast.LENGTH_SHORT).show();
-                                clearForm();
-                                getParentFragmentManager().popBackStack();
-                            })
-                            .addOnFailureListener(e -> Toast.makeText(getContext(),
-                                    "Failed to update exam ID: " + e.getMessage(),
-                                    Toast.LENGTH_SHORT).show());
-                })
-                .addOnFailureListener(e -> Toast.makeText(getContext(),
-                        "Failed to save test: " + e.getMessage(),
-                        Toast.LENGTH_SHORT).show());
+    private void handleDatabaseError(String databaseType, Exception e) {
+        Log.e(TAG, databaseType + " save failed", e);
+        showError("Lưu bài kiểm tra thất bại: " + e.getMessage());
+    }
+
+    private void showSuccess(String message) {
+        if (isAdded()) {
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showProgressDialog(String message) {
+        if (isAdded()) {
+            progressDialog = new ProgressDialog(requireContext());
+            progressDialog.setMessage(message);
+            progressDialog.setCancelable(false);
+            progressDialog.show();
+        }
+    }
+
+    private void hideProgressDialog() {
+        if (progressDialog != null && progressDialog.isShowing()) {
+            progressDialog.dismiss();
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        hideProgressDialog();
     }
 
     private void clearForm() {
         testNameInput.setText("");
+        timeLimitInput.setText("");
+        numberQuestionInput.setText("");
         deadlinePicker.setText("Set deadline");
         selectedDeadline = null;
         classPicker.setSelection(0);

@@ -39,7 +39,7 @@
             android:name=".ExamAction"
             android:exported="false" />
         <activity
-            android:name=".ExamStudent"
+            android:name=".ExamStudentFragment"
             android:exported="false" />
         <activity
             android:name=".StudentActivity"
