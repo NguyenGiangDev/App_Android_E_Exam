@@ -1,7 +1,19 @@
-### QUY TẮC LÀM VIỆC TRÊN GITHUB
-- Trước khi bắt đầu làm, kiểm tra nhánh master nếu có thay đổi thì pull về local
-- Chỉ commit khi hoàn thành 1 chức năng / sửa xong 1 bug nào đó, không commit khi đang làm dở, không commit dồn
-- Ghi rõ nội dung commit: tiếng Việt, có dấu
-- Hoàn thành 1 task thì push vào branch của mình, không push vào master
-- Khi muốn thay đổi được merge vào master, tạo pull request (đã cài Protection rules), sau đó nhờ một bạn trong nhóm review code và approve pull request
-- Khi thực hiện một chức năng phức tạp hoặc sửa bug khó có thể tạo thêm branch từ nhánh của bản thân để làm. Sau khi làm xong thì merge vào nhánh gốc (không merge vào master) và xoá nhánh hiện tại đi
+# E-Exam
+
+E-Exam is an Android application designed to facilitate online examinations. It was developed as a final project for the Mobile Application Development course at UIT (NT118).
+
+## Features
+
+### User Roles
+- **Students**: Can take exams, view their scores, and access class materials.
+- **Teachers**: Can create exams, manage classes, and view student performance.
+- **Administrators**: Can manage users and classes.
+
+![arch](https://i.imgur.com/MWtJst5.png)
+
+## Firebase Integration
+- **Authentication**: Manages user login and registration.
+- **Firestore Database**: Stores exam data, user information, and class details.
+- **Realtime Database**: Used for real-time updates and data synchronization.
+- **Storage**: Stores exam-related files such as PDFs and Excel sheets.
+
