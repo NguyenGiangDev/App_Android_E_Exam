@@ -69,7 +69,7 @@ public class ClassStudentFragment extends Fragment {
         // Gửi dữ liệu vào Fragment thông qua Bundle
         Bundle bundle = new Bundle();
         bundle.putString("CLASS_NAME", className);
-        bundle.putString("studentId", studentId);
+        bundle.putString("StudentId", studentId);
         fragment.setArguments(bundle);
 
         // Thêm Fragment vào Activity
